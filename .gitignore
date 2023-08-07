@@ -1,0 +1,15 @@
+# Ignore compiled Python files
+__pycache__/
+*.py[cod]
+
+# Ignore virtual environment directories
+venv/
+env/
+
+# Ignore IDE specific settings
+.vscode/
+.idea/
+
+# Ignore the database file used for storing employee data
+employee_data.json
+
