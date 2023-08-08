@@ -25,18 +25,17 @@ def add_employee(employees):
 def schedule_shift(shifts, role):
     if not shifts:
         return 'None', 'None'
-
+    
     morning_shift = shifts.pop(0)
     afternoon_shift = morning_shift
 
     if role == 'barista' and random.random() < 0.8:
-        if shifts: # Ensure that there is another staff member for the afternoon shift
+        if shifts:
             afternoon_shift = shifts.pop(0)
     elif role == 'kitchen' and random.random() < 0.5:
-        if shifts: # Ensure that there is another staff member for the afternoon shift
+        if shifts:
             afternoon_shift = shifts.pop(0)
 
-    # Append them back to the end of the list so they can be considered for future shifts
     shifts.append(morning_shift)
     if morning_shift != afternoon_shift:
         shifts.append(afternoon_shift)
@@ -58,13 +57,12 @@ def view_schedule(employees):
         print(f"  Kitchen Staffer: {kitchen_staffer_morning} - 8 AM to 12 PM, {kitchen_staffer_afternoon} - 12 PM to 5 PM")
         print(f"  Barista: {barista_morning} - 8 AM to 12 PM, {barista_afternoon} - 12 PM to 5 PM")
 
-        # Calculate hours
         for staffer in [kitchen_staffer_morning, kitchen_staffer_afternoon, barista_morning, barista_afternoon]:
             if staffer != 'None':
                 if staffer == kitchen_staffer_morning or staffer == barista_morning:
-                    scheduled_hours[staffer] += 4 # Morning shift
+                    scheduled_hours[staffer] += 4
                 if staffer == kitchen_staffer_afternoon or staffer == barista_afternoon:
-                    scheduled_hours[staffer] += 5 # Afternoon shift
+                    scheduled_hours[staffer] += 5
 
     print('\nEmployee Scheduled Hours:')
     for name, hours in scheduled_hours.items():
@@ -73,21 +71,19 @@ def view_schedule(employees):
     for employee in employees:
         if employee['employment_time'] == 'full-time':
             shifts = [employee['name']] * 5
-        else: # part-time
+        else:
             shifts = [employee['name']] * 2
 
         if employee['role'] == 'kitchen':
             kitchen_shifts.extend(shifts)
-        else: # barista
+        else:
             barista_shifts.extend(shifts)
 
-    for day in days_of_week:
-        print(day)
-        kitchen_staffer_morning, kitchen_staffer_afternoon = schedule_shift(kitchen_shifts, 'kitchen')
-        barista_morning, barista_afternoon = schedule_shift(barista_shifts, 'barista')
-
-        print(f"  Kitchen Staffer: {kitchen_staffer_morning} - 8 AM to 12 PM, {kitchen_staffer_afternoon} - 12 PM to 5 PM")
-        print(f"  Barista: {barista_morning} - 8 AM to 12 PM, {barista_afternoon} - 12 PM to 5 PM")
+def view_employees(employees):
+    print('\nList of Employees:')
+    for employee in employees:
+        print(f"Name: {employee['name']}, Role: {employee['role']}, Employment Time: {employee['employment_time']}")
+    print() # Blank line for readability
 
 def main():
     employees = load_data()
@@ -95,13 +91,16 @@ def main():
         print('\nMenu:')
         print('1. Add Employee')
         print('2. View Schedule')
-        print('3. Exit')
-        choice = input('Please select an option (1-3): ')
+        print('3. View Employees')  # New option to view employees
+        print('4. Exit')
+        choice = input('Please select an option (1-4): ')
         if choice == '1':
             add_employee(employees)
         elif choice == '2':
             view_schedule(employees)
         elif choice == '3':
+            view_employees(employees)  # New function call to view employees
+        elif choice == '4':
             save_data(employees)
             print('Data saved. Goodbye!')
             break
@@ -110,5 +109,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-

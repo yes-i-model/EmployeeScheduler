@@ -12,4 +12,3 @@ env/
 
 # Ignore the database file used for storing employee data
 employee_data.json
-
