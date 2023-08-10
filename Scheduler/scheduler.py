@@ -59,7 +59,7 @@ def delete_employee(employees):
     print(f'Employee {name} deleted successfully!')
     save_data(employees)
 
-def schedule_shift(shifts, role):
+def schedule_shift(shifts, role, scheduled_hours):
     if not shifts:
         return 'None', 'None'
     
@@ -79,6 +79,86 @@ def schedule_shift(shifts, role):
 
     return morning_shift, afternoon_shift
 
+
+def view_schedule(employees):
+    print('\n' + '-'*40)
+    print('Shift Schedule'.center(40))
+    print('-'*40)
+
+    days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    kitchen_shifts = [employee['name'] for employee in employees if employee['role'] == 'kitchen']
+    barista_shifts = [employee['name'] for employee in employees if employee['role'] == 'barista']
+    scheduled_hours = {employee['name']: 0 for employee in employees}
+
+    for day in days_of_week:
+        for employee in employees:
+            if (employee['employment_time'] == 'part-time' and 9 <= scheduled_hours[employee['name']] <= 32) or                (employee['employment_time'] == 'full-time' and 20 <= scheduled_hours[employee['name']] <= 40):
+                continue
+
+            if employee['role'] == 'kitchen':
+                morning_shift, afternoon_shift = schedule_shift(kitchen_shifts, 'kitchen', scheduled_hours)
+            else:
+                morning_shift, afternoon_shift = schedule_shift(barista_shifts, 'barista', scheduled_hours)
+
+            print(f"  {employee['role'].capitalize()}: {morning_shift:15} 8 AM - 12 PM")
+            print(f"          {afternoon_shift:15} 12 PM - 5 PM")
+
+            for staffer in [morning_shift, afternoon_shift]:
+                if staffer != 'None':
+                    if staffer == morning_shift:
+                        scheduled_hours[staffer] += 4
+                    else:
+                        scheduled_hours[staffer] += 5
+
+    print('\n' + '-'*40)
+    print('Employee Scheduled Hours'.center(40))
+    print('-'*40)
+    for name, hours in scheduled_hours.items():
+        print(f"{name:20}: {hours} hours")
+def view_employees(employees):
+    print('\nList of Employees:')
+    for employee in employees:
+        print(f"Name: {employee['name']}, Role: {employee['role']}, Employment Time: {employee['employment_time']}")
+    print() # Blank line for readability
+
+def main():
+    global employees
+    employees = load_data()
+    signal.signal(signal.SIGINT, save_on_terminate)
+
+    while True:
+        print('\nMenu:')
+        print('1. Edit Employees')
+        print('2. View Schedule')
+        print('3. View Employees')
+        print('4. Exit')
+        choice = input('Please select an option (1-4): ')
+
+        if choice == '1':
+            print('\nEdit Employees:')
+            print('a. Add Employee')
+            print('b. Modify Employee')
+            print('c. Delete Employee')
+            edit_choice = input('Please select an option (a-c): ')
+            if edit_choice == 'a':
+                add_employee(employees)
+            elif edit_choice == 'b':
+                modify_employee(employees)
+            elif edit_choice == 'c':
+                delete_employee(employees)
+            else:
+                print('Invalid option, please try again.')
+        elif choice == '2':
+            view_schedule(employees)
+        elif choice == '3':
+            view_employees(employees)
+        elif choice == '4':
+            save_data(employees)
+            print('Data saved. Goodbye!')
+            break
+        else:
+            print('Invalid option, please try again.')
+
 def view_schedule(employees):
     print('\n' + '-'*40)
     print('Shift Schedule'.center(40))
@@ -91,8 +171,8 @@ def view_schedule(employees):
 
     for day in days_of_week:
         print('\n' + day.center(40, '-'))
-        kitchen_staffer_morning, kitchen_staffer_afternoon = schedule_shift(kitchen_shifts, 'kitchen')
-        barista_morning, barista_afternoon = schedule_shift(barista_shifts, 'barista')
+        kitchen_staffer_morning, kitchen_staffer_afternoon = schedule_shift(kitchen_shifts, 'kitchen', scheduled_hours)
+        barista_morning, barista_afternoon = schedule_shift(barista_shifts, 'barista', scheduled_hours)
 
         print(f"  Kitchen: {kitchen_staffer_morning:15} 8 AM - 12 PM")
         print(f"          {kitchen_staffer_afternoon:15} 12 PM - 5 PM")
