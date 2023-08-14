@@ -91,11 +91,22 @@ def view_schedule(employees):
     kitchen_shifts = [emp for emp in employees if emp['role'] == 'kitchen']
     barista_shifts = [emp for emp in employees if emp['role'] == 'barista']
 
+    # Shuffle the lists
+    random.shuffle(kitchen_shifts)
+    random.shuffle(barista_shifts)
+
+    max_shifts = {
+        'full-time': 5,
+        'part-time': 3
+    }
+
+    shifts_assigned = {emp['name']: 0 for emp in employees}
+
     for day in days_of_week:
-        kitchen_morning = kitchen_shifts.pop(0) if kitchen_shifts else {'name': 'None'}
-        kitchen_afternoon = kitchen_shifts.pop(0) if kitchen_shifts else {'name': 'None'}
-        barista_morning = barista_shifts.pop(0) if barista_shifts else {'name': 'None'}
-        barista_afternoon = barista_shifts.pop(0) if barista_shifts else {'name': 'None'}
+        kitchen_morning = assign_shift(kitchen_shifts, max_shifts, shifts_assigned)
+        kitchen_afternoon = assign_shift(kitchen_shifts, max_shifts, shifts_assigned)
+        barista_morning = assign_shift(barista_shifts, max_shifts, shifts_assigned)
+        barista_afternoon = assign_shift(barista_shifts, max_shifts, shifts_assigned)
 
         print(f"| {day.center(13)} | {'Kitchen'.center(8)} | {kitchen_morning['name'].center(23)} | {kitchen_afternoon['name'].center(24)} |")
         print(separator)
@@ -112,6 +123,19 @@ def view_schedule(employees):
     print("\nEmployee Hours:".center(80, '-'))
     for employee, worked_hours in hours.items():
         print(f"{employee}: {worked_hours} hours")
+
+def assign_shift(shifts, max_shifts, shifts_assigned):
+    # Try to assign a staffer who hasn't reached their max shifts first
+    for staffer in shifts:
+        if shifts_assigned[staffer['name']] < max_shifts[staffer['employment_time']]:
+            shifts_assigned[staffer['name']] += 1
+            return staffer
+
+    # If all staffers have reached their max shifts, assign the least assigned staffer
+    least_assigned_staffer = min(shifts, key=lambda s: shifts_assigned[s['name']])
+    shifts_assigned[least_assigned_staffer['name']] += 1
+    return least_assigned_staffer
+
 
 def main():
     employees = load_data()
