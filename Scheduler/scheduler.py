@@ -76,7 +76,23 @@ def view_employees(employees):
         print(f"Name: {employee['name']}, Role: {employee['role']}, Employment Time: {employee['employment_time']}")
 
 # Schedule functions
+
+def interpret_conflicts(conflict_description, employees):
+    conflict_affected_employees = []
+    for employee in employees:
+        if employee['name'].lower() in conflict_description.lower():
+            conflict_affected_employees.append(employee['name'])
+    return conflict_affected_employees
+
 def view_schedule(employees):
+    conflicts_present = input("\nAre there any dynamic conflicts for this week? (yes/no): ").strip().lower()
+    conflict_affected_employees = []
+    if conflicts_present == 'yes':
+        conflict_description = input("Please describe the conflicts affecting this week's schedule: ")
+        conflict_affected_employees = interpret_conflicts(conflict_description, employees)
+
+    # Rest of the view_schedule function (original content)...
+
     print("\nShift Schedule:".center(80, '-'))
     days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     hours = {}
@@ -103,10 +119,11 @@ def view_schedule(employees):
     shifts_assigned = {emp['name']: 0 for emp in employees}
 
     for day in days_of_week:
-        kitchen_morning = assign_shift(kitchen_shifts, max_shifts, shifts_assigned)
-        kitchen_afternoon = assign_shift(kitchen_shifts, max_shifts, shifts_assigned)
-        barista_morning = assign_shift(barista_shifts, max_shifts, shifts_assigned)
-        barista_afternoon = assign_shift(barista_shifts, max_shifts, shifts_assigned)
+        kitchen_morning = assign_shift(kitchen_shifts, max_shifts, shifts_assigned, conflict_affected_employees)
+        kitchen_afternoon = assign_shift(kitchen_shifts, max_shifts, shifts_assigned, conflict_affected_employees)
+        barista_morning = assign_shift(barista_shifts, max_shifts, shifts_assigned, conflict_affected_employees)
+        barista_afternoon = assign_shift(barista_shifts, max_shifts, shifts_assigned, conflict_affected_employees)
+
 
         print(f"| {day.center(13)} | {'Kitchen'.center(8)} | {kitchen_morning['name'].center(23)} | {kitchen_afternoon['name'].center(24)} |")
         print(separator)
@@ -124,17 +141,29 @@ def view_schedule(employees):
     for employee, worked_hours in hours.items():
         print(f"{employee}: {worked_hours} hours")
 
-def assign_shift(shifts, max_shifts, shifts_assigned):
+
+def assign_shift(shifts, max_shifts, shifts_assigned, conflict_affected_employees):
+    available_staffers = [s for s in shifts if s['name'] not in conflict_affected_employees]
+    
+    # If no staffers available due to conflicts, consider all staffers
+    if not available_staffers:
+        available_staffers = shifts
+
     # Try to assign a staffer who hasn't reached their max shifts first
-    for staffer in shifts:
+    for staffer in available_staffers:
         if shifts_assigned[staffer['name']] < max_shifts[staffer['employment_time']]:
             shifts_assigned[staffer['name']] += 1
             return staffer
 
     # If all staffers have reached their max shifts, assign the least assigned staffer
-    least_assigned_staffer = min(shifts, key=lambda s: shifts_assigned[s['name']])
-    shifts_assigned[least_assigned_staffer['name']] += 1
-    return least_assigned_staffer
+    least_assigned_staffer = min(available_staffers, key=lambda s: shifts_assigned[s['name']])
+    if least_assigned_staffer['name'] not in conflict_affected_employees:
+        shifts_assigned[least_assigned_staffer['name']] += 1
+        return least_assigned_staffer
+
+    # If there are absolutely no suitable employees available, return a default value
+    return {'name': 'None'}
+
 
 
 def main():
