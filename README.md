@@ -1,8 +1,8 @@
-# Scheduler - Employee Shift Scheduling Tool
+# Schedulr - Employee Shift Scheduling Tool
 
 ## Overview
 
-Scheduler is a command-line program designed to optimize employee shift scheduling. By utilizing an efficient algorithm, it intelligently creates optimal schedules, considering employee names, employment time, and other configurable parameters.
+Schedulr is a command-line program designed to optimize employee shift scheduling. By utilizing an efficient algorithm, it intelligently creates optimal schedules, considering employee names, employment time, and other configurable parameters.
 
 Whether you're a small business owner or managing a large team, Scheduler can save you time and eliminate the hassle of manual scheduling.
 
