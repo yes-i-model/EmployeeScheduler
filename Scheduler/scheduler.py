@@ -1,5 +1,6 @@
 import json
 import random
+import re
 
 # Loading data functions
 def load_data():
@@ -75,23 +76,50 @@ def view_employees(employees):
     for employee in employees:
         print(f"Name: {employee['name']}, Role: {employee['role']}, Employment Time: {employee['employment_time']}")
 
-# Schedule functions
 
-def interpret_conflicts(conflict_description, employees):
-    conflict_affected_employees = []
+def interpret_input(description, employees):
+    permissions = {}
+    restrictions = {}
+    
+    days_pattern = r"(monday|tuesday|wednesday|thursday|friday|saturday|sunday)"
+    days = re.findall(days_pattern, description, re.IGNORECASE)
+    
+    shifts = []
+    if "morning" in description.lower():
+        shifts.append("morning")
+    if "afternoon" in description.lower():
+        shifts.append("afternoon")
+    
+    # If no specific shift is mentioned, assume both shifts are affected
+    if not shifts:
+        shifts = ["morning", "afternoon"]
+    
     for employee in employees:
-        if employee['name'].lower() in conflict_description.lower():
-            conflict_affected_employees.append(employee['name'])
-    return conflict_affected_employees
+        employee_name = employee['name'].lower()
+        if employee_name in description.lower():
+            shifts_for_employee = [f"{day.lower()}-{shift}" for day in days for shift in shifts]
+            if "cannot work" in description.lower():
+                restrictions[employee_name] = shifts_for_employee
+            else:
+                permissions[employee_name] = shifts_for_employee
+            break
+
+    return permissions, restrictions
+
 
 def view_schedule(employees):
+    permissions = {}
+    restrictions = {}
+    
     conflicts_present = input("\nAre there any dynamic conflicts for this week? (yes/no): ").strip().lower()
-    conflict_affected_employees = []
-    if conflicts_present == 'yes':
-        conflict_description = input("Please describe the conflicts affecting this week's schedule: ")
-        conflict_affected_employees = interpret_conflicts(conflict_description, employees)
+    while conflicts_present == 'yes':
+        description = input("Please describe the conflicts or permissions for an employee (or type 'done' to finish): ")
+        if description.lower() == 'done':
+            break
+        perms, restricts = interpret_input(description, employees)
+        permissions.update(perms)
+        restrictions.update(restricts)
 
-    # Rest of the view_schedule function (original content)...
 
     print("\nShift Schedule:".center(80, '-'))
     days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -116,14 +144,13 @@ def view_schedule(employees):
         'part-time': 3
     }
 
-    shifts_assigned = {emp['name']: 0 for emp in employees}
+    shifts_assigned = {emp['name'].lower(): 0 for emp in employees}
 
     for day in days_of_week:
-        kitchen_morning = assign_shift(kitchen_shifts, max_shifts, shifts_assigned, conflict_affected_employees)
-        kitchen_afternoon = assign_shift(kitchen_shifts, max_shifts, shifts_assigned, conflict_affected_employees)
-        barista_morning = assign_shift(barista_shifts, max_shifts, shifts_assigned, conflict_affected_employees)
-        barista_afternoon = assign_shift(barista_shifts, max_shifts, shifts_assigned, conflict_affected_employees)
-
+        kitchen_morning = assign_shift(kitchen_shifts, max_shifts, shifts_assigned, permissions, restrictions, day, "morning")
+        kitchen_afternoon = assign_shift(kitchen_shifts, max_shifts, shifts_assigned, permissions, restrictions, day, "afternoon")
+        barista_morning = assign_shift(barista_shifts, max_shifts, shifts_assigned, permissions, restrictions, day, "morning")
+        barista_afternoon = assign_shift(barista_shifts, max_shifts, shifts_assigned, permissions, restrictions, day, "afternoon")
 
         print(f"| {day.center(13)} | {'Kitchen'.center(8)} | {kitchen_morning['name'].center(23)} | {kitchen_afternoon['name'].center(24)} |")
         print(separator)
@@ -142,26 +169,41 @@ def view_schedule(employees):
         print(f"{employee}: {worked_hours} hours")
 
 
-def assign_shift(shifts, max_shifts, shifts_assigned, conflict_affected_employees):
-    available_staffers = [s for s in shifts if s['name'] not in conflict_affected_employees]
+
+def assign_shift(shifts, max_shifts, shifts_assigned, permissions, restrictions, day, shift_time):
+    available_staffers = [s for s in shifts]
+    shift_key = f"{day.lower()}-{shift_time}"
     
-    # If no staffers available due to conflicts, consider all staffers
-    if not available_staffers:
-        available_staffers = shifts
-
-    # Try to assign a staffer who hasn't reached their max shifts first
+    best_staffer = None
+    min_shifts_so_far = float('inf')
+    
     for staffer in available_staffers:
-        if shifts_assigned[staffer['name']] < max_shifts[staffer['employment_time']]:
-            shifts_assigned[staffer['name']] += 1
+        staffer_name = staffer['name'].lower()
+        
+        # If staffer has permissions, then check if the shift_key is in permissions
+        if staffer_name in permissions and shift_key not in permissions[staffer_name]:
+            continue
+        
+        # If staffer has restrictions, then check if the shift_key is in restrictions
+        if staffer_name in restrictions and shift_key in restrictions[staffer_name]:
+            continue
+        
+        # If staffer hasn't exceeded max shifts, assign them immediately
+        if shifts_assigned[staffer_name] < max_shifts[staffer['employment_time']]:
+            shifts_assigned[staffer_name] += 1
             return staffer
+        
+        # Otherwise, keep track of staffer with least shifts to possibly assign later
+        if shifts_assigned[staffer_name] < min_shifts_so_far:
+            min_shifts_so_far = shifts_assigned[staffer_name]
+            best_staffer = staffer
 
-    # If all staffers have reached their max shifts, assign the least assigned staffer
-    least_assigned_staffer = min(available_staffers, key=lambda s: shifts_assigned[s['name']])
-    if least_assigned_staffer['name'] not in conflict_affected_employees:
-        shifts_assigned[least_assigned_staffer['name']] += 1
-        return least_assigned_staffer
-
-    # If there are absolutely no suitable employees available, return a default value
+    # If we found a staffer with the least shifts, assign them
+    if best_staffer:
+        shifts_assigned[best_staffer['name'].lower()] += 1
+        return best_staffer
+    
+    # If no staffers available, return 'None'
     return {'name': 'None'}
 
 
