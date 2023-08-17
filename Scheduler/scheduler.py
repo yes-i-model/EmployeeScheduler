@@ -1,6 +1,30 @@
 import json
 import random
 import re
+import sys
+
+# Global username-password dictionary for simplicity. In reality, this should be encrypted and stored securely.
+USER_CREDENTIALS = {
+    'admin': 'password123',
+    'manager': 'managerpass'
+}
+
+def login():
+    print("Please login to access the Employee Scheduler Menu.")
+    tries = 3
+    while tries:
+        username = input("Enter your username: ")
+        password = input("Enter your password: ")
+
+        if username in USER_CREDENTIALS and USER_CREDENTIALS[username] == password:
+            return username
+        else:
+            tries -= 1
+            if tries:
+                print(f"Incorrect username or password. You have {tries} {'try' if tries == 1 else 'tries'} left.")
+            else:
+                print("Incorrect username or password. Exiting program.")
+                return None
 
 # Loading data functions
 def load_data():
@@ -218,15 +242,23 @@ def assign_shift(shifts, max_shifts, shifts_assigned, permissions, restrictions,
 
 
 def main():
-    employees = load_data()
+    # Call the login function
+    user = login()
 
+    if user is None:
+        return
+
+    print(f"\nWelcome, {user}!")
+    
     while True:
+        employees = load_data()
+
         print("\nEmployee Scheduler Menu:")
         print("1. Edit Employees")
         print("2. View Schedule")
         print("3. View Employees")
         print("4. Quit")
-        
+            
         choice = input("\nEnter your choice: ")
 
         if choice == '1':
@@ -237,9 +269,11 @@ def main():
             view_employees(employees)
         elif choice == '4':
             print("Goodbye!")
-            break
+            sys.exit(0)
+
         else:
             print("Invalid option, please try again.")
+
 
 if __name__ == "__main__":
     main()
