@@ -96,9 +96,36 @@ def delete_employee(employees):
     save_data(employees)
 
 def view_employees(employees):
-    print('\nList of Employees:')
+    if not employees:
+        print("\nNo employees added yet.")
+        return
+
+    # Define headers and separator for the table
+    headers = ["Name", "Role", "Employment Time"]
+    max_lengths = {
+        "Name": max(len(emp['name']) for emp in employees) + 2,
+        "Role": max(len(emp['role']) for emp in employees) + 2,
+        "Employment Time": max(len(emp['employment_time']) for emp in employees) + 2
+    }
+    
+    separator = "+".join("-" * max_lengths[header] for header in headers)
+    
+    print("\nList of Employees:")
+    print(f"+{separator}+")
+    print("|", end="")
+    for header in headers:
+        print(f" {header.center(max_lengths[header])} |", end="")
+    print("\n+" + separator + "+")
+
+    # Print employee details in the table
     for employee in employees:
-        print(f"Name: {employee['name']}, Role: {employee['role']}, Employment Time: {employee['employment_time']}")
+        print("|", end="")
+        print(f" {employee['name'].center(max_lengths['Name'])} |", end="")
+        print(f" {employee['role'].center(max_lengths['Role'])} |", end="")
+        print(f" {employee['employment_time'].center(max_lengths['Employment Time'])} |", end="")
+        print()
+    print(f"+{separator}+")
+
 
 
 def interpret_input(description, employees):
