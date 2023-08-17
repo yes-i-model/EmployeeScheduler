@@ -147,23 +147,32 @@ def view_schedule(employees):
     shifts_assigned = {emp['name'].lower(): 0 for emp in employees}
 
     for day in days_of_week:
+        daily_hours = {}
+        
         kitchen_morning = assign_shift(kitchen_shifts, max_shifts, shifts_assigned, permissions, restrictions, day, "morning")
         kitchen_afternoon = assign_shift(kitchen_shifts, max_shifts, shifts_assigned, permissions, restrictions, day, "afternoon")
         barista_morning = assign_shift(barista_shifts, max_shifts, shifts_assigned, permissions, restrictions, day, "morning")
         barista_afternoon = assign_shift(barista_shifts, max_shifts, shifts_assigned, permissions, restrictions, day, "afternoon")
+
 
         print(f"| {day.center(13)} | {'Kitchen'.center(8)} | {kitchen_morning['name'].center(23)} | {kitchen_afternoon['name'].center(24)} |")
         print(separator)
         print(f"| {day.center(13)} | {'Barista'.center(8)} | {barista_morning['name'].center(23)} | {barista_afternoon['name'].center(24)} |")
         print(separator)
         
-        for staffer in [kitchen_morning, kitchen_afternoon]:
+        # Update daily_hours for each shift
+        for staffer in [kitchen_morning, barista_morning]:
             if staffer['name'] != 'None':
-                hours[staffer['name']] = hours.get(staffer['name'], 0) + 4
-        for staffer in [barista_morning, barista_afternoon]:
+                daily_hours[staffer['name']] = daily_hours.get(staffer['name'], 0) + 4
+        for staffer in [kitchen_afternoon, barista_afternoon]:
             if staffer['name'] != 'None':
-                hours[staffer['name']] = hours.get(staffer['name'], 0) + 5
+                daily_hours[staffer['name']] = daily_hours.get(staffer['name'], 0) + 5
+        
+        # If an employee is scheduled for both shifts, adjust their hours
+        for employee, worked_hours in daily_hours.items():
+            hours[employee] = hours.get(employee, 0) + worked_hours
 
+     
     print("\nEmployee Hours:".center(80, '-'))
     for employee, worked_hours in hours.items():
         print(f"{employee}: {worked_hours} hours")
