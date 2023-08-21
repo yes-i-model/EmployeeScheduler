@@ -6,7 +6,8 @@ import sys
 # Global username-password dictionary for simplicity. In reality, this should be encrypted and stored securely.
 USER_CREDENTIALS = {
     'admin': 'password123',
-    'manager': 'managerpass'
+    'manager': 'managerpass',
+    '1' : '1'
 }
 
 def login():
@@ -62,7 +63,7 @@ def add_employee(employees):
     name = input('Enter the employee name: ')
     role = input('Enter the role (kitchen or barista): ').strip().lower()
     employment_time = input('Enter the employment time (full-time or part-time): ').strip().lower()
-    if role not in ['kitchen', 'barista'] or employment_time not in ['full-time', 'part-time']:
+    if role not in ['kitchen', 'barista', 'both'] or employment_time not in ['full-time', 'part-time']:
         print('Invalid role or employment time. Please enter valid details.')
         return
     employees.append({'name': name, 'role': role, 'employment_time': employment_time})
@@ -77,7 +78,7 @@ def modify_employee(employees):
         return
     new_role = input(f'Enter new role for {name} (kitchen or barista): ').strip().lower()
     new_employment_time = input(f'Enter new employment time for {name} (full-time or part-time): ').strip().lower()
-    if new_role not in ['kitchen', 'barista'] or new_employment_time not in ['full-time', 'part-time']:
+    if new_role not in ['kitchen', 'barista', 'both'] or new_employment_time not in ['full-time', 'part-time']:
         print('Invalid role or employment time. Please enter valid details.')
         return
     employee['role'] = new_role
@@ -171,7 +172,6 @@ def view_schedule(employees):
         permissions.update(perms)
         restrictions.update(restricts)
 
-
     print("\nShift Schedule:".center(80, '-'))
     days_of_week = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     hours = {}
@@ -185,10 +185,12 @@ def view_schedule(employees):
     
     kitchen_shifts = [emp for emp in employees if emp['role'] == 'kitchen']
     barista_shifts = [emp for emp in employees if emp['role'] == 'barista']
+    both_shifts = [emp for emp in employees if emp['role'] == 'both']
 
     # Shuffle the lists
     random.shuffle(kitchen_shifts)
     random.shuffle(barista_shifts)
+    random.shuffle(both_shifts)
 
     max_shifts = {
         'full-time': 5,
@@ -196,55 +198,74 @@ def view_schedule(employees):
     }
 
     shifts_assigned = {emp['name'].lower(): 0 for emp in employees}
+    daily_assigned = {}
+    morning_staff = {'name': 'None'}
 
     for day in days_of_week:
-        daily_hours = {}
+        roles = ['kitchen', 'barista']
+        shift_times = ['morning', 'afternoon']
+        random.shuffle(roles)  # Randomly order the roles
+        random.shuffle(shift_times)  # Randomly order the shift times
         
-        kitchen_morning = assign_shift(kitchen_shifts, max_shifts, shifts_assigned, permissions, restrictions, day, "morning")
-        kitchen_afternoon = assign_shift(kitchen_shifts, max_shifts, shifts_assigned, permissions, restrictions, day, "afternoon")
-        barista_morning = assign_shift(barista_shifts, max_shifts, shifts_assigned, permissions, restrictions, day, "morning")
-        barista_afternoon = assign_shift(barista_shifts, max_shifts, shifts_assigned, permissions, restrictions, day, "afternoon")
-
-
-        print(f"| {day.center(13)} | {'Kitchen'.center(8)} | {kitchen_morning['name'].center(23)} | {kitchen_afternoon['name'].center(24)} |")
-        print(separator)
-        print(f"| {day.center(13)} | {'Barista'.center(8)} | {barista_morning['name'].center(23)} | {barista_afternoon['name'].center(24)} |")
-        print(separator)
-        
-        # Update daily_hours for each shift
-        for staffer in [kitchen_morning, barista_morning]:
-            if staffer['name'] != 'None':
-                daily_hours[staffer['name']] = daily_hours.get(staffer['name'], 0) + 4
-        for staffer in [kitchen_afternoon, barista_afternoon]:
-            if staffer['name'] != 'None':
-                daily_hours[staffer['name']] = daily_hours.get(staffer['name'], 0) + 5
-        
-        # If an employee is scheduled for both shifts, adjust their hours
-        for employee, worked_hours in daily_hours.items():
-            hours[employee] = hours.get(employee, 0) + worked_hours
-
-     
+        for role in roles:
+            for shift_time in shift_times:
+                current_shifts = kitchen_shifts if role == 'kitchen' else barista_shifts
+                staffer = assign_shift(role, current_shifts, both_shifts, max_shifts, shifts_assigned, daily_assigned, permissions, restrictions, day, shift_time)
+                
+                # Print the scheduled staffer
+                if shift_time == 'morning':
+                    morning_staff = staffer
+                else:
+                    print(f"| {day.center(13)} | {role.capitalize().center(8)} | {morning_staff['name'].center(23)} | {staffer['name'].center(24)} |")
+                    print(separator)
+                    
+                # Update hours for each shift
+                if staffer['name'] != 'None':
+                    hours[staffer['name']] = hours.get(staffer['name'], 0) + (4 if shift_time == 'morning' else 5)
+    
     print("\nEmployee Hours:".center(80, '-'))
     for employee, worked_hours in hours.items():
         print(f"{employee}: {worked_hours} hours")
 
 
 
-def assign_shift(shifts, max_shifts, shifts_assigned, permissions, restrictions, day, shift_time):
-    available_staffers = [s for s in shifts]
+
+def assign_shift(role, shifts, both_shifts, max_shifts, shifts_assigned, daily_assigned, permissions, restrictions, day, shift_time):
     shift_key = f"{day.lower()}-{shift_time}"
     
+    # First, check if there's an available staffer from the 'both' role list
+    for staffer in both_shifts:
+        staffer_name = staffer['name'].lower()
+        
+        # Check if staffer is already assigned for the day
+        if staffer_name in daily_assigned and day in daily_assigned[staffer_name]:
+            continue
+        
+        # Check permissions and restrictions
+        if staffer_name in permissions and shift_key not in permissions[staffer_name]:
+            continue
+        if staffer_name in restrictions and shift_key in restrictions[staffer_name]:
+            continue
+        
+        # If staffer hasn't exceeded max shifts, assign them immediately
+        if shifts_assigned[staffer_name] < max_shifts[staffer['employment_time']]:
+            shifts_assigned[staffer_name] += 1
+            if staffer_name not in daily_assigned:
+                daily_assigned[staffer_name] = []
+            daily_assigned[staffer_name].append(day)
+            return staffer
+
+    # If no 'both' staffer is available, proceed with the usual logic
+    available_staffers = [s for s in shifts]
     best_staffer = None
     min_shifts_so_far = float('inf')
     
     for staffer in available_staffers:
         staffer_name = staffer['name'].lower()
         
-        # If staffer has permissions, then check if the shift_key is in permissions
+        # Check permissions and restrictions
         if staffer_name in permissions and shift_key not in permissions[staffer_name]:
             continue
-        
-        # If staffer has restrictions, then check if the shift_key is in restrictions
         if staffer_name in restrictions and shift_key in restrictions[staffer_name]:
             continue
         
@@ -253,7 +274,7 @@ def assign_shift(shifts, max_shifts, shifts_assigned, permissions, restrictions,
             shifts_assigned[staffer_name] += 1
             return staffer
         
-        # Otherwise, keep track of staffer with least shifts to possibly assign later
+        # Keep track of staffer with least shifts to possibly assign later
         if shifts_assigned[staffer_name] < min_shifts_so_far:
             min_shifts_so_far = shifts_assigned[staffer_name]
             best_staffer = staffer
@@ -262,9 +283,11 @@ def assign_shift(shifts, max_shifts, shifts_assigned, permissions, restrictions,
     if best_staffer:
         shifts_assigned[best_staffer['name'].lower()] += 1
         return best_staffer
-    
+
     # If no staffers available, return 'None'
     return {'name': 'None'}
+
+
 
 
 
